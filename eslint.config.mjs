@@ -1,0 +1,63 @@
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
+
+/* The FreeSeak discipline, kept for PDFDock: unused code fails the
+   build. A leading underscore marks intentionally-unused params. */
+const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
+  rules: {
+    // TypeScript rules
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+    ],
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/ban-ts-comment": "off",
+    "@typescript-eslint/prefer-as-const": "off",
+    "@typescript-eslint/no-unused-disable-directive": "off",
+
+    // React rules
+    "react-hooks/exhaustive-deps": "off",
+    "react-hooks/purity": "off",
+    "react/no-unescaped-entities": "off",
+    "react/display-name": "off",
+    "react/prop-types": "off",
+    "react-compiler/react-compiler": "off",
+
+    // Next.js rules
+    "@next/next/no-img-element": "off",
+    "@next/next/no-html-link-for-pages": "off",
+
+    // General JavaScript rules
+    "prefer-const": "off",
+    "no-unused-vars": [
+      "error",
+      { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+    ],
+    "no-console": "off",
+    "no-debugger": "off",
+    "no-empty": "off",
+    "no-irregular-whitespace": "off",
+    "no-case-declarations": "off",
+    "no-fallthrough": "off",
+    "no-mixed-spaces-and-tabs": "off",
+    "no-redeclare": "off",
+    "no-undef": "off",
+    "no-unreachable": "off",
+    "no-useless-escape": "off",
+  },
+}, {
+  ignores: [
+    "node_modules/**",
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    // vendored pdf.js workers — static assets copied from node_modules,
+    // not our code (same treatment as node_modules).
+    "public/pdf.worker.min.mjs",
+    "public/pdf.renderer.min.mjs",
+  ]
+}];
+
+export default eslintConfig;

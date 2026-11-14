@@ -1,0 +1,10 @@
+{
+  // Cloudflare Workers static-assets deployment (alternative to Pages).
+  // Build first (`npm run build` → ./out), then `npx wrangler deploy`.
+  "name": "pdfdock",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./out",
+    "not_found_handling": "404-page"
+  }
+}
