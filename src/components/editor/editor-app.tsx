@@ -101,7 +101,7 @@ export function EditorApp() {
           aspect: w / h,
         };
         addObject(obj);
-        toast.success("Image placed — drag it and resize with the corner handles.");
+        toast.success("Image placed — drag to move; hold Ctrl (⌘/Alt) while resizing to keep proportions.");
       } catch {
         toast.error("Couldn't read that image — try a PNG or JPEG.");
       }

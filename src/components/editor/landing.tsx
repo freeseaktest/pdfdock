@@ -115,10 +115,10 @@ function PdfDropZone({ onFiles }: { onFiles: (_files: File[]) => void }) {
 /* ------------------------------------------------------------------ */
 
 const FEATURES: { icon: typeof Type; title: string; text: string }[] = [
-  { icon: Type, title: "Add text", text: "Type onto any page — 12 built-in fonts, any size and colour. Exported as real, selectable text." },
+  { icon: Type, title: "Add text", text: "Type onto any page — 11 font families (3 built-in PDF fonts plus 8 self-hosted open fonts like Inter, Lato and Caveat), any size and colour. Exported as real, selectable text." },
   { icon: Signature, title: "Sign by hand", text: "Draw your signature with mouse or touch and place it anywhere. Transparent background, crisp vector export." },
-  { icon: Eraser, title: "White-out", text: "Cover a name, a price, a whole clause — then type over it. Optional rasterize export for true redaction." },
-  { icon: Highlighter, title: "Highlight", text: "Swipe a translucent marker over the lines that matter, in any tint you like." },
+  { icon: Eraser, title: "White-out brush", text: "Brush over a name, a price, a whole clause — adjustable width — then type over it. Double-click existing text to retype it in one move. Optional rasterize export for true redaction." },
+  { icon: Highlighter, title: "Highlight", text: "Swipe a translucent marker brush over the lines that matter, in any tint and width you like." },
   { icon: Pen, title: "Draw & annotate", text: "Freehand pen, straight lines, rectangles and ellipses with controllable stroke and fill." },
   { icon: FileText, title: "Fill forms", text: "Real AcroForm fields? Fill text boxes, checkboxes, dropdowns and radios right here." },
   { icon: ImageIcon, title: "Images & stamps", text: "Place your logo, a photo or a scanned signature anywhere on the page." },
@@ -301,7 +301,7 @@ export function Landing() {
             },
             {
               q: "Can I edit the existing text of a paragraph?",
-              a: "Not by rewriting it in place — no honest browser tool can do that well, because PDF text isn't stored as a flowable document. The professional approach (the one desktop editors use) is cover-and-replace: white-out the old line and type the new one. That is exactly what the White-out + Text tools do here.",
+              a: "Not by rewriting it in place — no honest browser tool can do that well, because PDF text isn't stored as a flowable document. The professional approach (the one desktop editors use) is cover-and-replace. PDFDock automates it: double-click any existing line with the Select tool — it gets covered and your editable copy drops right on top, ready to retype.",
             },
             {
               q: "Can I sign a PDF without printing it?",
@@ -317,7 +317,7 @@ export function Landing() {
             },
             {
               q: "Which languages can I type in?",
-              a: "The built-in PDF fonts cover Western and Central European languages well. Right-to-left scripts and CJK are not supported in v1 — typed text is stored as-is and standard-font coverage decides how it renders.",
+              a: "The 3 built-in PDF font families and the 8 embedded families (Inter, Roboto, Open Sans, Lato, Montserrat, Oswald, Playfair Display, Caveat) cover Western and Central European languages. Right-to-left scripts and CJK are not supported yet — typed text is stored as-is and the embedded font coverage decides how it renders.",
             },
           ].map((f) => (
             <details

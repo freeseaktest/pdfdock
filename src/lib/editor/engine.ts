@@ -19,8 +19,8 @@ import type {
   PDFDocumentLoadingTask,
 } from "pdfjs-dist";
 import type { PageEntry, EditorObject, FormFieldInfo, FormValues } from "./types";
-import { FONTS, type FontKey } from "./fonts";
-import { displayDims, displayToUser } from "./geometry";
+import { FONTS, fontFileUrl, type FontKey } from "./fonts";
+import { displayDims, displayToUser, userToDisplay } from "./geometry";
 
 /* ------------------------------------------------------------------ */
 /* lazy library loading                                                */
@@ -152,6 +152,95 @@ export function closeRenderDoc(): void {
   renderTask?.destroy().catch(() => undefined);
   renderTask = null;
   renderDoc = null;
+  textHitsCache.clear();
+}
+
+/* ------------------------------------------------------------------ */
+/* existing-text hit testing (the retype assist)                       */
+/* ------------------------------------------------------------------ */
+
+export interface TextHit {
+  str: string;
+  /** display-space bbox of the whole line of text */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** detected font size (pt) */
+  size: number;
+  /** display-space baseline y — null on sideways pages */
+  baselineY: number | null;
+}
+
+const textHitsCache = new Map<number, TextHit[]>();
+
+/**
+ * Locate the line of existing document text under a display-space
+ * point — the heart of "double-click to retype". Horizontal text
+ * only; angled or vertical runs are skipped honestly.
+ */
+export async function findTextAt(
+  srcIndex: number,
+  rotation: number,
+  px: number,
+  py: number,
+): Promise<TextHit | null> {
+  if (!renderDoc || srcIndex === null) return null;
+  let hits = textHitsCache.get(srcIndex);
+  if (!hits) {
+    const page = await renderDoc.getPage(srcIndex + 1);
+    const content = await page.getTextContent();
+    const view = page.view;
+    const geom = {
+      userWidth: view[2] - view[0],
+      userHeight: view[3] - view[1],
+      rotation: ((rotation % 360) + 360) % 360,
+    };
+    hits = [];
+    for (const item of content.items) {
+      if (!("transform" in item) || typeof item.str !== "string") continue;
+      if (item.str.trim().length === 0) continue;
+      const [a, b, c, d, e, f] = item.transform;
+      /* horizontal text only — skip angled and vertical runs */
+      if (Math.abs(b) > 0.01 || Math.abs(c) > 0.01) continue;
+      const size = Math.abs(d ?? 0) || Math.abs(a ?? 0) || 10;
+      if (size < 4 || size > 72) continue;
+      const advance = (item as { width?: number }).width ?? 0;
+      /* user-space corners: baseline start/end, extended for ascent+descent */
+      const p1 = userToDisplay(geom, e, f - 0.3 * size);
+      const p2 = userToDisplay(geom, e + Math.max(advance, 1), f + 0.85 * size);
+      const base = userToDisplay(geom, e, f);
+      hits.push({
+        str: item.str,
+        x: Math.min(p1.x, p2.x),
+        y: Math.min(p1.y, p2.y),
+        w: Math.abs(p2.x - p1.x),
+        h: Math.abs(p2.y - p1.y),
+        size,
+        baselineY:
+          geom.rotation % 180 === 0 ? base.y : null,
+      });
+    }
+    page.cleanup();
+    textHitsCache.set(srcIndex, hits);
+  }
+  const tol = 2.5;
+  let best: TextHit | null = null;
+  let bestDist = Infinity;
+  for (const h of hits) {
+    const inside =
+      px >= h.x - tol && px <= h.x + h.w + tol &&
+      py >= h.y - tol && py <= h.y + h.h + tol;
+    if (!inside) continue;
+    const dx = Math.max(h.x - px, px - (h.x + h.w), 0);
+    const dy = Math.max(h.y - py, py - (h.y + h.h), 0);
+    const dist = Math.hypot(dx, dy);
+    if (dist < bestDist) {
+      best = h;
+      bestDist = dist;
+    }
+  }
+  return best;
 }
 
 /* ------------------------------------------------------------------ */
@@ -409,11 +498,26 @@ async function burnAnnotations(
   const pageIndexById = new Map(pages.map((p, i) => [p.id, i]));
 
   /* --- 4. fonts (one embed per key actually used) ----------------- */
+  /* extra families embed the self-hosted TTF (subsetted to the glyphs
+     actually used) via fontkit; standard fonts stay zero-byte. */
+  let fontkitRegistered = false;
   const fontCache = new Map<FontKey, Awaited<ReturnType<typeof doc.embedFont>>>();
   const fontFor = async (key: FontKey) => {
     let font = fontCache.get(key);
     if (!font) {
-      font = await doc.embedFont(FONTS[key].standard as never);
+      const def = FONTS[key] ?? FONTS.helv;
+      if (def.group === "extra" && def.file) {
+        if (!fontkitRegistered) {
+          doc.registerFontkit((await import("@pdf-lib/fontkit")).default);
+          fontkitRegistered = true;
+        }
+        const res = await fetch(fontFileUrl(def.file));
+        if (!res.ok) throw new Error("font-fetch-failed");
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        font = await doc.embedFont(bytes, { subset: true });
+      } else {
+        font = await doc.embedFont((def.standard ?? "Helvetica") as never);
+      }
       fontCache.set(key, font);
     }
     return font;

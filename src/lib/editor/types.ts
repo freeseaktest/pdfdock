@@ -70,9 +70,13 @@ export interface LineObject extends BaseObject {
   strokeWidth: number;
 }
 
-/** freehand stroke — points RELATIVE to the bbox top-left */
+/** freehand stroke — points RELATIVE to the bbox top-left.
+ *  `role` distinguishes the pen (ink) from the white-out brush and
+ *  the highlighter brush; they share one model so move/resize/rotate,
+ *  undo and export behave identically. */
 export interface StrokeObject extends BaseObject {
   type: "pen";
+  role: "ink" | "whiteout" | "highlight";
   points: { x: number; y: number }[];
   strokeColor: string;
   strokeWidth: number;
@@ -146,4 +150,9 @@ export interface ToolSettings {
   penWidth: number;
   highlightColor: string;
   whiteoutColor: string;
+  /** brush widths (pt) for the highlighter / white-out brushes */
+  highlightWidth: number;
+  whiteoutWidth: number;
 }
+
+export type StrokeRole = "ink" | "whiteout" | "highlight";

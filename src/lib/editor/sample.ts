@@ -138,8 +138,9 @@ export async function createSamplePdfBytes(): Promise<Uint8Array> {
   y2 -= 280;
   p2.drawText("Try it here:", { x: L, y: y2, size: 10, font: helvB, color: ink });
   const tips = [
-    "Draw over this text with the Highlighter tool.",
+    "Draw over this text with the Highlighter brush.",
     "Circle a line with the Ellipse or Pen tool.",
+    "Double-click any line of text to retype it.",
     "Stamp your logo with the Image tool.",
     "Rotate this page 90 degrees — the whole page turns.",
     "Delete this page, or add a blank page after it.",

@@ -20,7 +20,7 @@ import type {
 } from "./types";
 import { closeRenderDoc, openDocument, renderThumb } from "./engine";
 import { rotatePointCw90, displayDims } from "./geometry";
-import { FONTS, type FontKey } from "./fonts";
+import { FONTS, FONT_FAMILIES, type FontKey } from "./fonts";
 
 /* ------------------------------------------------------------------ */
 /* state shapes                                                        */
@@ -72,8 +72,12 @@ export interface EditorStore {
   setTool: (_tool: ToolId) => void;
   setZoom: (_zoom: number | "fit") => void;
   setPageIndex: (_index: number) => void;
+  /** scroll-driven page sync: updates the indicator WITHOUT deselecting */
+  setVisiblePage: (_index: number) => void;
 
   addObject: (_obj: EditorObject, _select?: boolean) => void;
+  /** atomic multi-add — ONE undo entry for the whole group (retype assist) */
+  addObjects: (_objs: EditorObject[], _selectId: string | null) => void;
   updateObject: (_id: string, _patch: Partial<EditorObject>) => void;
   replaceObject: (_obj: EditorObject) => void;
   deleteObject: (_id: string) => void;
@@ -110,6 +114,8 @@ const DEFAULT_SETTINGS: ToolSettings = {
   penWidth: 3,
   highlightColor: "#FFE066",
   whiteoutColor: "#FFFFFF",
+  highlightWidth: 16,
+  whiteoutWidth: 18,
 };
 
 /** new ids for objects */
@@ -204,6 +210,10 @@ export const useEditor = create<EditorStore>((set, get) => ({
       selectedId: null,
       editingTextId: null,
     })),
+  setVisiblePage: (index) =>
+    set((s) => ({
+      pageIndex: Math.max(0, Math.min(index, s.pages.length - 1)),
+    })),
 
   /* ---------------- objects ---------------- */
 
@@ -212,6 +222,15 @@ export const useEditor = create<EditorStore>((set, get) => ({
     set((s) => ({
       objects: [...s.objects, obj],
       selectedId: select ? obj.id : s.selectedId,
+    }));
+  },
+
+  addObjects: (objs, selectId) => {
+    if (objs.length === 0) return;
+    get().pushHistory();
+    set((s) => ({
+      objects: [...s.objects, ...objs],
+      selectedId: selectId ?? s.selectedId,
     }));
   },
 
@@ -335,9 +354,18 @@ export const useEditor = create<EditorStore>((set, get) => ({
         });
     } else if (sel.type === "pen") {
       const patchObj: Record<string, unknown> = {};
-      if (patch.penColor !== undefined) patchObj.strokeColor = patch.penColor;
-      if (patch.penWidth !== undefined) patchObj.strokeWidth = patch.penWidth;
-      if (patch.shapeOpacity !== undefined) patchObj.opacity = patch.shapeOpacity;
+      if (sel.role === "whiteout") {
+        if (patch.whiteoutColor !== undefined) patchObj.strokeColor = patch.whiteoutColor;
+        if (patch.whiteoutWidth !== undefined) patchObj.strokeWidth = patch.whiteoutWidth;
+      } else if (sel.role === "highlight") {
+        if (patch.highlightColor !== undefined) patchObj.strokeColor = patch.highlightColor;
+        if (patch.highlightWidth !== undefined) patchObj.strokeWidth = patch.highlightWidth;
+        if (patch.shapeOpacity !== undefined) patchObj.opacity = patch.shapeOpacity;
+      } else {
+        if (patch.penColor !== undefined) patchObj.strokeColor = patch.penColor;
+        if (patch.penWidth !== undefined) patchObj.strokeWidth = patch.penWidth;
+        if (patch.shapeOpacity !== undefined) patchObj.opacity = patch.shapeOpacity;
+      }
       if (Object.keys(patchObj).length > 0)
         set({
           objects: s.objects.map((o) =>
@@ -504,14 +532,13 @@ export const useEditor = create<EditorStore>((set, get) => ({
 
 /* helpers used by patchSettings above ------------------------------ */
 
+/* derived from the picker model so extra families resolve too */
 const FONT_FAMILIES_BY_FAMILY: Record<
   string,
   { keys: { regular: FontKey; bold: FontKey; italic: FontKey; boldItalic: FontKey } }
-> = {
-  Helvetica: { keys: { regular: "helv", bold: "helvB", italic: "helvI", boldItalic: "helvBI" } },
-  Times: { keys: { regular: "times", bold: "timesB", italic: "timesI", boldItalic: "timesBI" } },
-  Courier: { keys: { regular: "cour", bold: "courB", italic: "courI", boldItalic: "courBI" } },
-};
+> = Object.fromEntries(
+  FONT_FAMILIES.map((f) => [f.family, { keys: f.keys }]),
+);
 
 /* convenience: re-render a page's thumbnail after page-level edits */
 export async function refreshThumb(pageId: string): Promise<void> {

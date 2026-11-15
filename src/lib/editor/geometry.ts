@@ -60,6 +60,30 @@ export function textDrawRotation(rotation: number): number {
 }
 
 /**
+ * Map a PDF user-space point (bottom-left origin, y up) to display space
+ * (top-left origin, y down) — the exact inverse of displayToUser, per
+ * pdf.js' viewport math. Used by the retype assist to locate existing
+ * document text under the pointer.
+ */
+export function userToDisplay(
+  geom: PageGeom,
+  x: number,
+  y: number,
+): { x: number; y: number } {
+  const { userWidth: w, userHeight: h } = geom;
+  switch (((geom.rotation % 360) + 360) % 360) {
+    case 90:
+      return { x: y, y: x };
+    case 180:
+      return { x: w - x, y: h - y };
+    case 270:
+      return { x: h - y, y: w - x };
+    default:
+      return { x, y: h - y };
+  }
+}
+
+/**
  * Rotate a display-space point by +90° CW when the visitor rotates a
  * page: content must rotate with it.
  * Old display is W×H → new display is H×W; a point (x, y) in the old

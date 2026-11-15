@@ -25,13 +25,15 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { useEditor } from "@/lib/editor/store";
-import { FONT_FAMILIES, FONTS, type FontKey } from "@/lib/editor/fonts";
+import { FONT_FAMILIES, FONTS, ensureFontLoaded, type FontKey } from "@/lib/editor/fonts";
 import type { EditorObject, ToolId } from "@/lib/editor/types";
 
 /* ------------------------------------------------------------------ */
@@ -196,6 +198,11 @@ export function PropertiesPanel() {
           Shortcuts — Ctrl+Z undo · Ctrl+Shift+Z redo · Delete removes
           the selection · arrows nudge · double-click a text to edit it.
         </p>
+        <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+          <strong>Retyping existing text:</strong> with the Select tool,
+          double-click any line of the document — it gets covered and
+          your editable copy drops right on top of it.
+        </p>
       </PanelShell>
     );
   }
@@ -228,62 +235,83 @@ export function PropertiesPanel() {
         />
       )}
 
-      {/* ---------------- white-out ---------------- */}
+      {/* ---------------- white-out brush ---------------- */}
       {contextTool === "whiteout" && (
         <div key={targetKey} className="flex flex-col gap-3">
           <ColorField
             label="Cover colour"
             value={
-              selected && selected.type === "whiteout"
-                ? selected.fillColor
+              selected && selected.type === "pen"
+                ? selected.strokeColor
                 : settings.whiteoutColor
             }
             onChange={(c) => {
-              if (selected && selected.type === "whiteout") {
-                patchObj({ fillColor: c ?? "#FFFFFF" });
+              if (selected && selected.type === "pen" && selected.role === "whiteout") {
+                patchObj({ strokeColor: c ?? "#FFFFFF" });
               } else {
                 patchSettings({ whiteoutColor: c ?? "#FFFFFF" });
               }
             }}
           />
           <WidthField
-            label="Opacity"
-            min={0.1}
-            max={1}
-            step={0.05}
-            unit=""
+            label="Brush width"
+            min={2}
+            max={40}
+            step={1}
             value={
-              selected && selected.type === "whiteout" ? selected.opacity : 1
+              selected && selected.type === "pen" && selected.role === "whiteout"
+                ? selected.strokeWidth
+                : settings.whiteoutWidth
             }
             onCommit={(v) => {
-              if (selected && selected.type === "whiteout") {
-                patchObj({ opacity: v });
+              if (selected && selected.type === "pen" && selected.role === "whiteout") {
+                patchObj({ strokeWidth: v });
+              } else {
+                patchSettings({ whiteoutWidth: v });
               }
             }}
           />
           <p className="text-[11.5px] leading-relaxed text-muted-foreground">
-            White-out hides content visually. For removal that survives
+            Brush over anything to cover it. For removal that survives
             copy-paste, tick <strong>Rasterize</strong> in the save
             dialog.
           </p>
         </div>
       )}
 
-      {/* ---------------- highlight ---------------- */}
+      {/* ---------------- highlighter brush ---------------- */}
       {contextTool === "highlight" && (
         <div key={targetKey} className="flex flex-col gap-3">
           <ColorField
             label="Tint"
             value={
-              selected && selected.type === "highlight"
-                ? selected.fillColor
+              selected && selected.type === "pen"
+                ? selected.strokeColor
                 : settings.highlightColor
             }
             onChange={(c) => {
-              if (selected && selected.type === "highlight") {
-                patchObj({ fillColor: c ?? "#FFE066" });
+              if (selected && selected.type === "pen" && selected.role === "highlight") {
+                patchObj({ strokeColor: c ?? "#FFE066" });
               } else {
                 patchSettings({ highlightColor: c ?? "#FFE066" });
+              }
+            }}
+          />
+          <WidthField
+            label="Brush width"
+            min={2}
+            max={40}
+            step={1}
+            value={
+              selected && selected.type === "pen" && selected.role === "highlight"
+                ? selected.strokeWidth
+                : settings.highlightWidth
+            }
+            onCommit={(v) => {
+              if (selected && selected.type === "pen" && selected.role === "highlight") {
+                patchObj({ strokeWidth: v });
+              } else {
+                patchSettings({ highlightWidth: v });
               }
             }}
           />
@@ -294,12 +322,12 @@ export function PropertiesPanel() {
             step={0.05}
             unit=""
             value={
-              selected && selected.type === "highlight"
+              selected && selected.type === "pen" && selected.role === "highlight"
                 ? selected.opacity
-                : 0.35
+                : 0.4
             }
             onCommit={(v) => {
-              if (selected && selected.type === "highlight") {
+              if (selected && selected.type === "pen" && selected.role === "highlight") {
                 patchObj({ opacity: v });
               }
             }}
@@ -443,8 +471,9 @@ export function PropertiesPanel() {
       {/* ---------------- image / signature ---------------- */}
       {(selected?.type === "image" || selected?.type === "signature") && (
         <p className="text-[12px] leading-relaxed text-muted-foreground">
-          Drag to reposition, use the corner handle to resize. The image
-          is embedded at full quality on export.
+          Drag to reposition, corner handles resize. Hold
+          <strong> Ctrl</strong> (or ⌘ / Alt) while dragging to keep the
+          proportions. The image is embedded at full quality on export.
         </p>
       )}
 
@@ -504,7 +533,7 @@ function toolForObject(obj: EditorObject): ToolId {
     case "line":
       return "line";
     case "pen":
-      return "pen";
+      return obj.role === "whiteout" ? "whiteout" : obj.role === "highlight" ? "highlight" : "pen";
     case "highlight":
       return "highlight";
     default:
@@ -529,6 +558,8 @@ function TextControls({
   const def = FONTS[key] ?? FONTS.helv;
   const bold = def.bold;
   const italic = def.italic;
+  const hasStyles =
+    FONT_FAMILIES.find((f) => f.family === def.family)?.hasStyles ?? false;
 
   const apply = (patch: Record<string, unknown>) => {
     if (onObject) onObject(patch);
@@ -538,6 +569,7 @@ function TextControls({
   const setFamily = (fam: string) => {
     const map = FONT_FAMILIES.find((f) => f.family === fam)?.keys;
     if (!map) return;
+    ensureFontLoaded(map.regular);
     const next = italic ? (bold ? map.boldItalic : map.italic) : bold ? map.bold : map.regular;
     apply({ fontKey: next });
   };
@@ -567,11 +599,26 @@ function TextControls({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {FONT_FAMILIES.map((f) => (
-              <SelectItem key={f.family} value={f.family} className="text-[12.5px]">
-                {f.family}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Built-in PDF fonts
+              </SelectLabel>
+              {FONT_FAMILIES.filter((f) => f.group === "standard").map((f) => (
+                <SelectItem key={f.family} value={f.family} className="text-[12.5px]">
+                  {f.family}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+            <SelectGroup>
+              <SelectLabel className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Embedded fonts (self-hosted)
+              </SelectLabel>
+              {FONT_FAMILIES.filter((f) => f.group === "extra").map((f) => (
+                <SelectItem key={f.family} value={f.family} className="text-[12.5px]">
+                  {f.family}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <div className="flex gap-1.5">
@@ -580,6 +627,8 @@ function TextControls({
             variant={bold ? "secondary" : "outline"}
             size="sm"
             aria-pressed={bold}
+            disabled={!hasStyles}
+            title={hasStyles ? "Bold" : "This family ships one weight"}
             onClick={() => setBold(!bold)}
             className="h-8 flex-1 gap-1 text-[12px]"
           >
@@ -591,6 +640,8 @@ function TextControls({
             variant={italic ? "secondary" : "outline"}
             size="sm"
             aria-pressed={italic}
+            disabled={!hasStyles}
+            title={hasStyles ? "Italic" : "This family ships one style"}
             onClick={() => setItalic(!italic)}
             className="h-8 flex-1 gap-1 text-[12px]"
           >
@@ -598,6 +649,12 @@ function TextControls({
             Italic
           </Button>
         </div>
+        {!hasStyles ? (
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Embedded at regular weight — the exact file you see is what
+            travels inside the PDF.
+          </p>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-1.5">

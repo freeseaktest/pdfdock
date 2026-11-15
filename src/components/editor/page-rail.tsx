@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useEditor, refreshThumb } from "@/lib/editor/store";
 import { renderThumb } from "@/lib/editor/engine";
+import { navBus } from "./nav";
 import type { PageEntry } from "@/lib/editor/types";
 
 function PageThumb({
@@ -59,6 +60,7 @@ function PageThumb({
       type="button"
       onClick={() => {
         setPageIndex(index);
+        navBus.goToPage(index);
         onNavigate?.();
       }}
       aria-label={`Go to page ${index + 1}`}

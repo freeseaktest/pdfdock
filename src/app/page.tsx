@@ -46,7 +46,7 @@ const FAQ_JSONLD = {
       name: "Can I edit the existing text of a paragraph?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Not by rewriting it in place — PDF text is not stored as a flowable document. The professional approach is cover-and-replace: white-out the old line and type the new one, which is exactly what the White-out and Text tools do here.",
+        text: "Not by rewriting it in place — PDF text is not stored as a flowable document. The professional approach is cover-and-replace: double-click the line with the Select tool and PDFDock covers it and drops your editable copy on top, ready to retype and save.",
       },
     },
     {

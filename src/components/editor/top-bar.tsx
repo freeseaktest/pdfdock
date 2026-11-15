@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useEditor } from "@/lib/editor/store";
 import { formatBytes } from "@/lib/editor/engine";
+import { navBus } from "./nav";
 import { LogoMark } from "@/components/site/logo";
 
 export function TopBar({
@@ -42,7 +43,6 @@ export function TopBar({
   const doc = useEditor((s) => s.doc);
   const pages = useEditor((s) => s.pages);
   const pageIndex = useEditor((s) => s.pageIndex);
-  const setPageIndex = useEditor((s) => s.setPageIndex);
   const zoom = useEditor((s) => s.zoom);
   const setZoom = useEditor((s) => s.setZoom);
   const undo = useEditor((s) => s.undo);
@@ -119,13 +119,13 @@ export function TopBar({
               </Tooltip>
             </div>
 
-            {/* page navigation */}
+            {/* page navigation — scrolls the continuous workspace */}
             <div className="hidden items-center gap-0.5 md:flex">
               <Button
                 variant="ghost"
                 size="icon"
                 aria-label="Previous page"
-                onClick={() => setPageIndex(pageIndex - 1)}
+                onClick={() => navBus.goToPage(pageIndex - 1)}
                 disabled={pageIndex === 0}
               >
                 <ChevronLeft className="size-[17px]" aria-hidden="true" />
@@ -137,7 +137,7 @@ export function TopBar({
                 variant="ghost"
                 size="icon"
                 aria-label="Next page"
-                onClick={() => setPageIndex(pageIndex + 1)}
+                onClick={() => navBus.goToPage(pageIndex + 1)}
                 disabled={pageIndex >= pages.length - 1}
               >
                 <ChevronRight className="size-[17px]" aria-hidden="true" />
@@ -240,7 +240,7 @@ export function TopBar({
             variant="ghost"
             size="icon"
             aria-label="Previous page"
-            onClick={() => setPageIndex(pageIndex - 1)}
+            onClick={() => navBus.goToPage(pageIndex - 1)}
             disabled={pageIndex === 0}
             className="size-9"
           >
@@ -253,7 +253,7 @@ export function TopBar({
             variant="ghost"
             size="icon"
             aria-label="Next page"
-            onClick={() => setPageIndex(pageIndex + 1)}
+            onClick={() => navBus.goToPage(pageIndex + 1)}
             disabled={pageIndex >= pages.length - 1}
             className="size-9"
           >

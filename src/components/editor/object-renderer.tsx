@@ -11,6 +11,26 @@ import type { EditorObject } from "@/lib/editor/types";
 
 export type HandleId = "nw" | "ne" | "sw" | "se" | "w" | "e";
 
+/** professional directional cursors for the corner/edge handles */
+const HANDLE_CURSORS: Record<string, string> = {
+  nw: "nwse-resize",
+  ne: "nesw-resize",
+  sw: "nesw-resize",
+  se: "nwse-resize",
+  w: "ew-resize",
+  e: "ew-resize",
+};
+
+/** the cursor for dragging a line endpoint: along the line's own angle */
+function lineHandleCursor(
+  dx: number,
+  dy: number,
+): string {
+  if (Math.abs(dx) > Math.abs(dy) * 2.4) return "ew-resize";
+  if (Math.abs(dy) > Math.abs(dx) * 2.4) return "ns-resize";
+  return dx * dy > 0 ? "nwse-resize" : "nesw-resize";
+}
+
 export interface ObjectViewProps {
   obj: EditorObject;
   scale: number;
@@ -45,13 +65,17 @@ export function ObjectView({
 
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
-  const handle = (id: HandleId | "p1" | "p2", style: React.CSSProperties) => (
+  const handle = (
+    id: HandleId | "p1" | "p2",
+    style: React.CSSProperties,
+    cursor: string,
+  ) => (
     <span
       role="button"
       tabIndex={-1}
       key={id}
       className="sel-handle"
-      style={style}
+      style={{ ...style, cursor }}
       onPointerDown={(e) => {
         e.stopPropagation();
         onPointerDownHandle(e, obj.id, id);
@@ -188,6 +212,9 @@ export function ObjectView({
           width={width}
           height={height}
           aria-hidden="true"
+          /* highlighter strokes multiply with the page beneath — the
+             classic felt-tip look over white paper */
+          style={obj.role === "highlight" ? { mixBlendMode: "multiply" } : undefined}
         >
           <path
             d={d}
@@ -243,29 +270,34 @@ export function ObjectView({
       {isSelected ? (
         obj.type === "line" ? (
           <>
-            {/* endpoint handles for lines */}
-            {handle("p1", {
-              left: (obj.x1 - obj.x) * scale - 6,
-              top: (obj.y1 - obj.y) * scale - 6,
-            })}
-            {handle("p2", {
-              left: (obj.x2 - obj.x) * scale - 6,
-              top: (obj.y2 - obj.y) * scale - 6,
-            })}
+            {/* endpoint handles for lines — cursor follows the line angle */}
+            {handle(
+              "p1",
+              {
+                left: (obj.x1 - obj.x) * scale - 6,
+                top: (obj.y1 - obj.y) * scale - 6,
+              },
+              lineHandleCursor(obj.x1 - obj.x2, obj.y1 - obj.y2),
+            )}
+            {handle(
+              "p2",
+              {
+                left: (obj.x2 - obj.x) * scale - 6,
+                top: (obj.y2 - obj.y) * scale - 6,
+              },
+              lineHandleCursor(obj.x2 - obj.x1, obj.y2 - obj.y1),
+            )}
           </>
         ) : obj.type === "text" ? (
           /* text: width handle on the right edge */
-          handle("e", {
-            left: width - 6,
-            top: height / 2 - 6,
-          })
+          handle("e", { left: width - 6, top: height / 2 - 6 }, HANDLE_CURSORS.e)
         ) : (
           /* everything else: four corner handles */
           <>
-            {handle("nw", { left: -6, top: -6 })}
-            {handle("ne", { left: width - 6, top: -6 })}
-            {handle("sw", { left: -6, top: height - 6 })}
-            {handle("se", { left: width - 6, top: height - 6 })}
+            {handle("nw", { left: -6, top: -6 }, HANDLE_CURSORS.nw)}
+            {handle("ne", { left: width - 6, top: -6 }, HANDLE_CURSORS.ne)}
+            {handle("sw", { left: -6, top: height - 6 }, HANDLE_CURSORS.sw)}
+            {handle("se", { left: width - 6, top: height - 6 }, HANDLE_CURSORS.se)}
           </>
         )
       ) : null}
@@ -298,4 +330,3 @@ export function DraftView({
     />
   );
 }
-

@@ -11,26 +11,26 @@ import {
   Circle,
   Minus,
   MousePointer2,
+  Paintbrush,
   Pencil,
   Signature,
   Square,
   Type,
   Upload,
   Highlighter,
-  Eraser,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useEditor } from "@/lib/editor/store";
 import type { ToolId } from "@/lib/editor/types";
 
 const TOOLS: { id: ToolId; label: string; icon: typeof Type; hint: string }[] = [
-  { id: "select", label: "Select", icon: MousePointer2, hint: "Move, resize and edit objects" },
-  { id: "text", label: "Text", icon: Type, hint: "Click the page to type" },
+  { id: "select", label: "Select", icon: MousePointer2, hint: "Move, resize and edit objects — double-click existing text to retype it" },
+  { id: "text", label: "Text", icon: Type, hint: "Click the page to type — 11 font families" },
   { id: "signature", label: "Sign", icon: Signature, hint: "Draw or place your signature" },
-  { id: "whiteout", label: "White-out", icon: Eraser, hint: "Drag to cover content" },
-  { id: "highlight", label: "Highlight", icon: Highlighter, hint: "Drag over a line to mark it" },
-  { id: "rect", label: "Rectangle", icon: Square, hint: "Drag to draw a box" },
-  { id: "ellipse", label: "Ellipse", icon: Circle, hint: "Drag to draw an ellipse" },
+  { id: "whiteout", label: "White-out", icon: Paintbrush, hint: "Brush over content to cover it — width adjustable" },
+  { id: "highlight", label: "Highlight", icon: Highlighter, hint: "Brush over a line to mark it — width adjustable" },
+  { id: "rect", label: "Rectangle", icon: Square, hint: "Drag to draw a box — hold Shift for a square" },
+  { id: "ellipse", label: "Ellipse", icon: Circle, hint: "Drag to draw an ellipse — hold Shift for a circle" },
   { id: "line", label: "Line", icon: Minus, hint: "Drag to draw a straight line" },
   { id: "pen", label: "Pen", icon: Pencil, hint: "Draw freehand" },
   { id: "image", label: "Image", icon: Upload, hint: "Place an image or logo" },
