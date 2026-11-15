@@ -1,10 +1,12 @@
 # PDFDock — Free PDF Editor (100% client-side)
 
 A complete, professional PDF editor that runs entirely in your
-visitor's browser. Add text, draw signatures, white-out content,
-highlight, draw shapes, stamp images, fill AcroForm fields, rotate/
-delete/add pages, and export — vector or rasterized. **No uploads, no
-server, no sign-up, no paid API or service anywhere.**
+visitor's browser. Add text in 11 font families, draw signatures,
+white-out content with a variable-width brush, highlight, draw shapes
+and lines, stamp images, fill AcroForm fields, retype existing text
+(double-click), rotate/delete/add pages, and export — vector or
+rasterized. **No uploads, no server, no sign-up, no paid API or
+service anywhere.**
 
 Built with Next.js 16 (static export), Tailwind CSS 4, pdf-lib,
 pdf.js v6 (workers vendored locally — no CDN), TypeScript, zustand.
@@ -20,40 +22,61 @@ Design language: Discovery Blue (matches the FreeSeak family).
 | Coordinate math (rotation-safe display ⇄ PDF space) | `src/lib/editor/geometry.ts` |
 | Editor state (objects, pages, undo/redo, tools) | `src/lib/editor/store.ts` |
 | Annotation model | `src/lib/editor/types.ts` |
-| Font model (12 standard PDF fonts, zero-byte embedding) | `src/lib/editor/fonts.ts` |
+| Font model (12 standard fonts + 8 embedded OFL fonts) | `src/lib/editor/fonts.ts`, `public/fonts/` |
 | Sample document generator | `src/lib/editor/sample.ts` |
 | The editor UI (workspace, dialogs, rail, properties) | `src/components/editor/` |
 | Site config — **the one file you edit** | `src/lib/site.ts` |
 | GitHub Pages deploy workflow | `.github/workflows/deploy-pages.yml` |
 | Vendored pdf.js workers | `public/pdf.worker.min.mjs`, `public/pdf.renderer.min.mjs` |
+| Vendored open fonts (SIL OFL, self-hosted) | `public/fonts/*.ttf` + `public/fonts/OFL-LICENSES.txt` |
 
 ### Features
 
-- **Add text** — click the page, type. Helvetica / Times / Courier in
-  all four styles, any size and colour. Exported as real, selectable,
-  searchable PDF text (not screenshots).
+- **Continuous pages** — the whole document scrolls in one column
+  (lazy-rendered, so 200-page files stay fast). Scrolling updates the
+  page indicator; thumbnails and arrow buttons jump to any page.
+- **Add text** — click the page, type. 11 font families: Helvetica /
+  Times / Courier (all four styles) plus 8 embedded open fonts —
+  Inter, Roboto, Open Sans, Lato, Montserrat, Oswald, Playfair
+  Display, Caveat — self-hosted and subset-embedded on export. Real,
+  selectable, searchable PDF text.
+- **Retype existing text** — double-click any line of the document
+  with the Select tool: it is covered automatically and your editable
+  copy drops on top at the same size. One undo removes both.
 - **Signature pad** — draw with mouse/pen/finger; trimmed and placed
   with a transparent background; movable and resizable.
-- **White-out** — cover anything, then type over it. Rasterize on
-  export for true redaction.
-- **Highlight, rectangle, ellipse, line, pen** — full shape set with
-  colour, stroke width, opacity and fill control.
-- **Images & stamps** — PNG/JPG anywhere on the page.
+- **White-out brush** — a variable-width freehand brush (2–40 pt) to
+  cover anything; type over it afterwards. Rasterize on export for
+  true redaction.
+- **Highlighter brush** — translucent felt-tip stroke with adjustable
+  width and tint (multiply blend, just like a real marker).
+- **Shapes & lines** — rectangle, ellipse (Shift keeps them square /
+  circular) and true straight lines with round caps and endpoint
+  handles.
+- **Pen** — freehand ink, any colour, width and opacity.
+- **Images & stamps** — PNG/JPG anywhere on the page; resize freely,
+  or hold Ctrl (⌘/Alt) to keep the proportions.
+- **Professional cursors** — objects show a move cursor, every handle
+  shows its own directional resize cursor (lines follow their own
+  angle).
 - **Fill forms** — real AcroForm text fields, checkboxes, dropdowns and
   radio groups; optional flattening on save.
 - **Fix pages** — rotate (content rotates with the page), delete, add
   blank pages.
 - **Undo/redo** — unlimited (Ctrl+Z / Ctrl+Shift+Z), plus Delete key,
-  arrow-key nudging, Ctrl+D duplicate, Esc to deselect.
+  arrow-key nudging, Ctrl+D duplicate, PageUp/PageDown paging, Esc to
+  deselect.
 - **Honest failures** — password-protected and corrupt PDFs get a clear
   message, never a blank screen.
 
 ### Two honest limits (stated on the site too)
 
-- Editing existing paragraph text is cover-and-replace (white-out +
-  retype) — the same approach desktop editors use; in-place reflow
-  rewrite is not feasible in the browser.
+- Editing existing paragraph text is cover-and-replace (the double-
+  click retype automates it) — in-place reflow rewrite is not feasible
+  in the browser; desktop editors take the same approach.
 - Password-protected PDFs cannot be decrypted client-side.
+- The 8 embedded font families cover Latin scripts and ship one
+  weight each (regular); RTL and CJK scripts are not supported.
 
 ---
 
@@ -87,7 +110,7 @@ every future commit redeploys automatically.**
    on public repos), **Create**.
 3. On the empty repo page click **"uploading an existing file"**
    (the link at the top of the empty-repo area).
-4. Unzip `pdfdock-v1.1.0.zip` on your computer, open the folder,
+4. Unzip `pdfdock-v1.2.0.zip` on your computer, open the folder,
    **select ALL contents** (including dotfiles like `.gitignore` and
    dotfolders like `.github` — enable "show hidden files" in your
    file manager).
@@ -188,5 +211,6 @@ build targets `/` (root) exactly like v1.0.0.
 | Site loads but looks unstyled, or the editor spins forever on open | Sub-path mismatch: the repo name and `NEXT_PUBLIC_BASE_PATH` in `deploy-pages.yml` must match exactly (`/pdfdock` ↔ repo `pdfdock`). |
 | Pages tab shows no deploy / "404" at the URL | Settings → Pages → Source must be **GitHub Actions**; then re-run the workflow from the Actions tab. |
 | Editor opens but pages don't render | The two `public/pdf.*.mjs` files are missing from the repo — re-upload the whole `public/` folder. |
+| Font picker shows only Helvetica/Times/Courier, embedded fonts never load | The `public/fonts/` folder (8 `.ttf` files + `OFL-LICENSES.txt`) is missing from the repo — re-upload it. |
 | Old address still in Google / share links | Check Step 4 — `SITE_URL` in `src/lib/site.ts` + `public/robots.txt`. |
 | Custom domain later | Settings → Pages → Custom domain (site then serves at root `/`; delete the `NEXT_PUBLIC_BASE_PATH` line in the workflow). |
