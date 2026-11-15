@@ -1,5 +1,18 @@
 name: Deploy to GitHub Pages
 
+# Deploys the static export (out/) to GitHub Pages on every push to main.
+# Free on public repositories — no Cloudflare, no paid service anywhere.
+#
+# ONE thing to check before first run:
+#   NEXT_PUBLIC_BASE_PATH below must equal your repository name, because a
+#   GitHub Pages *project* site is served from https://<user>.github.io/<repo>/.
+#   Repo is named "pdfdock" → keep /pdfdock as-is. Different repo name →
+#   change that single line. Deploying the <user>.github.io root repo or a
+#   custom domain → delete the NEXT_PUBLIC_BASE_PATH line entirely.
+#
+# Required once, manually, in GitHub:
+#   Repo → Settings → Pages → Build and deployment → Source: "GitHub Actions"
+
 on:
   push:
     branches: [main]
@@ -10,6 +23,7 @@ permissions:
   pages: write
   id-token: write
 
+# One deployment at a time; a new push waits for the previous one.
 concurrency:
   group: github-pages
   cancel-in-progress: true
@@ -30,10 +44,10 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Lint (quality gate)
+      - name: Lint (quality gate — a broken commit never deploys)
         run: npm run lint
 
-      - name: Build (static export)
+      - name: Build (static export → ./out)
         run: npm run build
         env:
           NEXT_PUBLIC_BASE_PATH: /pdfdock
